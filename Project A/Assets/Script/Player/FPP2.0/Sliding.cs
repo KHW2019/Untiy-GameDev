@@ -78,7 +78,7 @@ public class Sliding : MonoBehaviour
         {
             rb.AddForce(inputDirection.normalized * slideForce, ForceMode.Force);
 
-            slideTimer -= Time.deltaTime;
+            //slideTimer -= Time.deltaTime;
         }
 
         //sliding down a slope

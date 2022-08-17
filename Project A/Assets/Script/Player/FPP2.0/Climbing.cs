@@ -77,7 +77,7 @@ public class Climbing : MonoBehaviour
         //State 1 - Climbing
         if (wallFront && Input.GetKey(KeyCode.W) && wallLookAngle < maxWallLookAngle)
         {
-            if (!climbing && climbTimer > 0) StartClibming(); Debug.Log("I am going up");
+            if (!climbing && climbTimer > 0) StartClibming();
 
             //Timer
             if (climbTimer > 0) climbTimer -= Time.deltaTime;
@@ -104,7 +104,6 @@ public class Climbing : MonoBehaviour
 
     private void StartClibming()
     {
-        climbing = true;
         climbing = true;
 
         lastWall = frontWallHit.transform;

@@ -10,6 +10,7 @@ public class PlayerMovmentX : MonoBehaviour
     public float sprintSpeed;
     public float climbSpeed;
     public float slideSpeed;
+    public float wallRunSpeed;
 
     private float desiredMoveSpeed;
     private float lastDesiredMoveSpeed;
@@ -66,11 +67,13 @@ public class PlayerMovmentX : MonoBehaviour
         air,
         sliding,
         crouching,
-        climbing
+        climbing,
+        wallRunning
     }
 
     public bool climbing;
     public bool sliding;
+    public bool wallRunning;
 
     // Start is called before the first frame update
     private void Start()
@@ -139,7 +142,13 @@ public class PlayerMovmentX : MonoBehaviour
 
     private void StateHandler()
     {
-        if (sliding)
+        if (wallRunning)
+        {
+            state = MovementState.wallRunning;
+            desiredMoveSpeed = wallRunSpeed;
+        }
+
+        else if (sliding)
         {
             state = MovementState.sliding;
             
@@ -242,7 +251,7 @@ public class PlayerMovmentX : MonoBehaviour
                 rb.AddForce(Vector3.down * 80f, ForceMode.Force);
         }
 
-        if (grounded)
+        else if (grounded)
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
         
         else if (!grounded)
