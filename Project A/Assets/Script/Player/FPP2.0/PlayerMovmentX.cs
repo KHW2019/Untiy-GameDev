@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class PlayerMovmentX : MonoBehaviour
 {
@@ -12,11 +13,17 @@ public class PlayerMovmentX : MonoBehaviour
     public float slideSpeed;
     public float wallRunSpeed;
 
+    public float dashSpeed;
+    public float dashSpeedChangeFactor;
+
     private float desiredMoveSpeed;
     private float lastDesiredMoveSpeed;
+    private bool keepMomentum;
 
     public float speedIncraseMultiplier;
     public float slopeIncraseMultiplier;
+
+    public float maxYSpeed;
 
     public float groundDrag;
 
@@ -46,6 +53,10 @@ public class PlayerMovmentX : MonoBehaviour
     private RaycastHit slopeHit;
     private bool exitingSlope;
 
+    [Header("Camera Effects")]
+    public PlayerCam cam;
+    public float grappleFov = 95f;
+
     [Header("References")]
     public Climbing climbingScript;
 
@@ -59,21 +70,29 @@ public class PlayerMovmentX : MonoBehaviour
     Rigidbody rb;
 
     public MovementState state;
+    private MovementState lastState;
 
     public enum MovementState
     {
+        freeze,
         walking,
         sprinting,
         air,
         sliding,
         crouching,
         climbing,
+        dashing,
         wallRunning
     }
+
+    public bool freeze;
+
+    public bool activeGrapple;
 
     public bool climbing;
     public bool sliding;
     public bool wallRunning;
+    public bool dashing;
 
     // Start is called before the first frame update
     private void Start()
@@ -96,10 +115,12 @@ public class PlayerMovmentX : MonoBehaviour
         SpeedControllor();
         StateHandler();
 
-        if (grounded)
+        if (state == MovementState.walking || state == MovementState.sprinting || state == MovementState.crouching &&  grounded && !activeGrapple)
             rb.drag = groundDrag;
         else
             rb.drag = 0;
+
+        TextStuff();
     }
 
     private void FixedUpdate()
@@ -140,9 +161,24 @@ public class PlayerMovmentX : MonoBehaviour
 
     }
 
+    
     private void StateHandler()
     {
-        if (wallRunning)
+        if (dashing)
+        {
+            state = MovementState.dashing;
+            desiredMoveSpeed = dashSpeed;
+            speedChangeFactor = dashSpeedChangeFactor;
+        }
+
+        else if (freeze)
+        {
+            state = MovementState.freeze;
+            desiredMoveSpeed = 0;
+            rb.velocity = Vector3.zero;
+        }
+
+        else if (wallRunning)
         {
             state = MovementState.wallRunning;
             desiredMoveSpeed = wallRunSpeed;
@@ -206,18 +242,41 @@ public class PlayerMovmentX : MonoBehaviour
             moveSpeed = desiredMoveSpeed;
         }
 
+        bool desiredMoveSpeedHasChanged = desiredMoveSpeed != lastDesiredMoveSpeed;
+        if (lastState == MovementState.dashing) keepMomentum = true;
+
+        if (desiredMoveSpeedHasChanged)
+        {
+            if (keepMomentum)
+            {
+                StopAllCoroutines();
+                StartCoroutine(SmoothlyLerpMoveSpeed());
+            }
+            else
+            {
+                StopAllCoroutines();
+                moveSpeed = desiredMoveSpeed;
+            }
+        }
+
         lastDesiredMoveSpeed = desiredMoveSpeed;
+        lastState = state;
     }
 
+    private float speedChangeFactor;
     private IEnumerator SmoothlyLerpMoveSpeed()
     {
         float time = 0;
         float difference = Mathf.Abs(desiredMoveSpeed - moveSpeed);
         float startValue = moveSpeed;
 
+        float boostFactor = speedChangeFactor;
+
         while (time < difference)
         {
             moveSpeed = Mathf.Lerp(startValue, desiredMoveSpeed, time / difference);
+
+            time += Time.deltaTime * boostFactor;
 
             if (OnSlope())
             {
@@ -235,10 +294,16 @@ public class PlayerMovmentX : MonoBehaviour
         }
 
         moveSpeed = desiredMoveSpeed;
+        speedChangeFactor = 1f;
+        keepMomentum = false;
     }
 
     private void MovePlayer()
     {
+        if (state == MovementState.dashing) return;
+
+        if (activeGrapple) return;
+
         if (climbingScript.exitingWall) return;
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
@@ -263,6 +328,8 @@ public class PlayerMovmentX : MonoBehaviour
     private void SpeedControllor()
     {
 
+        if (activeGrapple) return;
+
         if (OnSlope() && !exitingSlope)
         {
             if (rb.velocity.magnitude > moveSpeed)
@@ -278,6 +345,11 @@ public class PlayerMovmentX : MonoBehaviour
                 Vector3 limitedVel = flatVel.normalized * moveSpeed;
                 rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
             }
+        }
+
+        if(maxYSpeed != 0 && rb.velocity.y > maxYSpeed)
+        {
+            rb.velocity = new Vector3(rb.velocity.x, maxYSpeed, rb.velocity.z);
         }
     }
 
@@ -297,6 +369,43 @@ public class PlayerMovmentX : MonoBehaviour
         exitingSlope = false;
     }
 
+    private bool enableMovementOnNextTouch;
+    public void JumpToPosition(Vector3 targetPosition, float traGectoryHeight)
+    {
+        activeGrapple = true;
+
+        velocityToSet = CalculateJumpVelocity(transform.position, targetPosition, traGectoryHeight);
+        Invoke(nameof(SetVelocity), 0.1f);
+
+        Invoke(nameof(ResetRestrictions), 3f);
+    }
+
+    private Vector3 velocityToSet;
+    private void SetVelocity()
+    {
+        enableMovementOnNextTouch = true;
+        rb.velocity = velocityToSet;
+
+        cam.DoFov(grappleFov);
+    }
+     
+    public void ResetRestrictions()
+    {
+        activeGrapple = false;
+        cam.DoFov(85f);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (enableMovementOnNextTouch)
+        {
+            enableMovementOnNextTouch = false;
+            ResetRestrictions();
+
+            GetComponent<Grappling>().StopGrapple();
+        }
+    }
+
     public bool OnSlope()
     {
         if(Physics.Raycast(transform.position, Vector3.down , out slopeHit, playerHeight * 0.5f + 0.3f))
@@ -313,4 +422,42 @@ public class PlayerMovmentX : MonoBehaviour
     {
         return Vector3.ProjectOnPlane(direction, slopeHit.normal).normalized;
     }
+
+    public Vector3 CalculateJumpVelocity(Vector3 startPoint, Vector3 endPoint, float trajectoryHeight)
+    {
+        float gravity = Physics.gravity.y;
+        float displacementY = endPoint.y - startPoint.y;
+        Vector3 displacementXZ = new Vector3(endPoint.x - startPoint.x, 0f, endPoint.z - startPoint.z);
+
+        Vector3 velocityY = Vector3.up * Mathf.Sqrt(-2 * gravity * trajectoryHeight);
+        Vector3 velocityXZ = displacementXZ / (Mathf.Sqrt(-2 * trajectoryHeight / gravity)
+            + Mathf.Sqrt(2 * (displacementY - trajectoryHeight) / gravity));
+
+        return velocityXZ + velocityY;
+    }
+
+    #region Text & Debugging
+
+    public TextMeshProUGUI text_speed;
+    public TextMeshProUGUI text_mode;
+    private void TextStuff()
+    {
+        Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+
+        if (OnSlope())
+            text_speed.SetText("Speed: " + Round(rb.velocity.magnitude, 1) + " / " + Round(moveSpeed, 1));
+
+        else
+            text_speed.SetText("Speed: " + Round(flatVel.magnitude, 1) + " / " + Round(moveSpeed, 1));
+
+        text_mode.SetText(state.ToString());
+    }
+
+    public static float Round(float value, int digits)
+    {
+        float mult = Mathf.Pow(10.0f, (float)digits);
+        return Mathf.Round(value * mult) / mult;
+    }
+
+    #endregion
 }
