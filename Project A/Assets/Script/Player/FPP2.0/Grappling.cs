@@ -31,7 +31,6 @@ public class Grappling : MonoBehaviour
     private void Start()
     {
         pm = GetComponent<PlayerMovmentX>();
-
     }
 
     // Update is called once per frame
@@ -47,8 +46,8 @@ public class Grappling : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (grappling)
-            lr.SetPosition(0, gunTip.position);
+        //if (grappling)
+        //    lr.SetPosition(0, gunTip.position);
     }
 
     private void StartGrapple()
@@ -72,8 +71,8 @@ public class Grappling : MonoBehaviour
             Invoke(nameof(StopGrapple), grappleDelayTime);
         }
 
-        lr.enabled = true;
-        lr.SetPosition(1, grapplePoint);
+        //lr.enabled = true;
+        //lr.SetPosition(1, grapplePoint);
     }
 
     private void ExecuteGrapple()
@@ -82,7 +81,7 @@ public class Grappling : MonoBehaviour
 
         Vector3 lowestPoint = new Vector3(transform.position.x, transform.position.y - 1f, transform.position.z);
 
-        float grapplePointRelativeYPos = grapplePoint.y = lowestPoint.y;
+        float grapplePointRelativeYPos = grapplePoint.y - lowestPoint.y;
         float HighestPointOnArc = grapplePointRelativeYPos + overshootYAxis;
 
         if (grapplePointRelativeYPos < 0) HighestPointOnArc = overshootYAxis;
@@ -100,6 +99,16 @@ public class Grappling : MonoBehaviour
 
         grapplingCdTimer = grapplingCd;
 
-        lr.enabled = false;
+        //lr.enabled = false;
+    }
+
+    public bool IsGarppling()
+    {
+        return grappling;
+    }
+
+    public Vector3 GetGrapplePoint()
+    {
+        return grapplePoint;
     }
 }
