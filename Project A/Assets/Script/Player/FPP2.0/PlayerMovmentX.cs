@@ -12,6 +12,7 @@ public class PlayerMovmentX : MonoBehaviour
     public float climbSpeed;
     public float slideSpeed;
     public float wallRunSpeed;
+    public float swingSpeed;
 
     public float dashSpeed;
     public float dashSpeedChangeFactor;
@@ -26,6 +27,8 @@ public class PlayerMovmentX : MonoBehaviour
     public float maxYSpeed;
 
     public float groundDrag;
+
+    private float speedChangeFactor;
 
     [Header("Jumping")]
     public float jumpForce;
@@ -62,6 +65,8 @@ public class PlayerMovmentX : MonoBehaviour
 
     public Transform orientation;
 
+    //public perspectiveChanger currentPerspective;
+
     float horizontalInput;
     float verticalInput;
 
@@ -75,6 +80,8 @@ public class PlayerMovmentX : MonoBehaviour
     public enum MovementState
     {
         freeze,
+        grappling,
+        swinging,
         walking,
         sprinting,
         air,
@@ -92,6 +99,7 @@ public class PlayerMovmentX : MonoBehaviour
     public bool climbing;
     public bool sliding;
     public bool wallRunning;
+    public bool swinging;
     public bool dashing;
 
     // Start is called before the first frame update
@@ -164,26 +172,43 @@ public class PlayerMovmentX : MonoBehaviour
     
     private void StateHandler()
     {
-        if (dashing)
+        // Mode - Freeze
+        if (freeze)
+        {
+            state = MovementState.freeze;
+            desiredMoveSpeed = 0;
+            rb.velocity = Vector3.zero;
+        }
+        
+        //Mode - Grappling
+        else if (activeGrapple)
+        {
+            state = MovementState.grappling;
+            desiredMoveSpeed = sprintSpeed;
+        }
+
+        else if (swinging)
+        {
+            state = MovementState.swinging;
+            desiredMoveSpeed = swingSpeed;
+        }
+
+        // Mode - Dashing
+        else if (dashing)
         {
             state = MovementState.dashing;
             desiredMoveSpeed = dashSpeed;
             speedChangeFactor = dashSpeedChangeFactor;
         }
 
-        else if (freeze)
-        {
-            state = MovementState.freeze;
-            desiredMoveSpeed = 0;
-            rb.velocity = Vector3.zero;
-        }
-
+        //Mode - WallRunning
         else if (wallRunning)
         {
             state = MovementState.wallRunning;
             desiredMoveSpeed = wallRunSpeed;
         }
 
+        //Mode Sliding
         else if (sliding)
         {
             state = MovementState.sliding;
@@ -268,7 +293,7 @@ public class PlayerMovmentX : MonoBehaviour
         lastState = state;
     }
 
-    private float speedChangeFactor;
+    
     private IEnumerator SmoothlyLerpMoveSpeed()
     {
         float time = 0;
@@ -308,6 +333,8 @@ public class PlayerMovmentX : MonoBehaviour
         if (state == MovementState.dashing) return;
 
         if (activeGrapple) return;
+
+        if (swinging) return;
 
         if (climbingScript.exitingWall) return;
 
@@ -393,7 +420,7 @@ public class PlayerMovmentX : MonoBehaviour
 
         cam.DoFov(grappleFov);
     }
-     
+
     public void ResetRestrictions()
     {
         activeGrapple = false;

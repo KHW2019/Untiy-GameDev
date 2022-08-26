@@ -16,6 +16,10 @@ public class Dashing : MonoBehaviour
     public float maxDashYSpeed;
     public float dashDuration;
 
+    [Header("CameraEffects")]
+    public PlayerCam cam;
+    public float dashFov;
+
     [Header("Settings")]
     public bool useCameraForward = true;
     public bool allowAllDirections = true;
@@ -56,6 +60,8 @@ public class Dashing : MonoBehaviour
 
         pm.dashing = true;
         pm.maxYSpeed = maxDashYSpeed;
+
+        cam.DoFov(dashFov);
 
         Transform forwardT;
 

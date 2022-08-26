@@ -127,16 +127,16 @@ public class ThirdPersonMovement : MonoBehaviour
         wallFront = Physics.SphereCast(transform.position, sphereCastRadius, orientation.forward, out frontWallHit, DetectionLength, whatIsWall);
         wallLookAngle = Vector3.Angle(orientation.forward, -frontWallHit.normal);
 
-        if(isGrounded)
+        if (isGrounded)
         {
             climbTimer = maxClimbTime;
         }
-    } 
+    }
 
     private void StateMachine()
     {
         //State 1 - Climbing
-        if (wallFront && Input.GetKey(KeyCode.W) && wallLookAngle < maxWallLookAngle) 
+        if (wallFront && Input.GetKey(KeyCode.W) && wallLookAngle < maxWallLookAngle)
         {
             if (!climbing && climbTimer > 0) StartClibming(); Debug.Log("I am going up");
 
