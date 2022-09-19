@@ -338,6 +338,8 @@ public class PlayerMovmentX : MonoBehaviour
 
         if (climbingScript.exitingWall) return;
 
+        if (swinging) return;
+
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
         if (OnSlope() && !exitingSlope)

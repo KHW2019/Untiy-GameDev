@@ -10,6 +10,7 @@ public class Grappling : MonoBehaviour
     public Transform gunTip;
     public LayerMask whatIsGrappleable;
     public LineRenderer lr;
+    private Swinging swing;
 
     [Header("Grappling")]
     public float maxGrappleDistance;
@@ -31,6 +32,7 @@ public class Grappling : MonoBehaviour
     private void Start()
     {
         pm = GetComponent<PlayerMovmentX>();
+        swing = GetComponent<Swinging>();
     }
 
     // Update is called once per frame
@@ -53,6 +55,8 @@ public class Grappling : MonoBehaviour
     private void StartGrapple()
     {
         if (grapplingCdTimer > 0) return;
+
+        swing.stopSwing();
 
         grappling = true;
 
